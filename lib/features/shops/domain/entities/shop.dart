@@ -5,7 +5,7 @@ class Shop extends Equatable {
   final String name;
   final String description;
   final String coverPhoto;
-  final int eta;
+  final String eta;
   final double minimumOrder;
   final String location;
   final bool isOpen;

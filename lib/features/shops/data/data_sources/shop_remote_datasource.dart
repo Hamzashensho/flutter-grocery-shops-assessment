@@ -8,13 +8,15 @@ abstract class ShopRemoteDataSource {
 
 class ShopRemoteDataSourceImpl implements ShopRemoteDataSource {
 
+  ShopRemoteDataSourceImpl();
+
   @override
   Future<List<ShopModel>> getShops() async {
-    final response = await DioHelper.getData(
-      url: 'shop/test/find/all/shop',
-    );
+    final response = await DioHelper.getData(url: 'https://api.orianosy.com/shop/test/find/all/shop', query: {
+    'deviceKind': 'mobile',
+    },);
 
-    final List data = response.data;
+    final List data = response.data['result'];
 
     return data.map((e) => ShopModel.fromJson(e)).toList();
   }

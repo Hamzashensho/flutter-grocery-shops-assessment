@@ -8,69 +8,72 @@ import 'package:shop/features/shops/domain/use_cases/get_shop_usecase.dart';
 part 'shop_state.dart';
 class ShopCubit extends Cubit<ShopState> {
   final GetShops getShops;
-
   ShopCubit(this.getShops) : super(ShopInitial());
 
   List<Shop> _allShops = [];
-  List<Shop> _filteredShops = [];
-
-  bool openOnly = false;
+  String _searchQuery = "";
+  bool _openOnly = false;
 
   Future<void> fetchShops() async {
     emit(ShopLoading());
-
     try {
-      final shops = await getShops(NoParams());
-
-      _allShops = shops;
-      _filteredShops = shops;
-
-      emit(ShopLoaded(_filteredShops));
+      _allShops = await getShops(NoParams());
+      _applyFilters();
     } catch (e) {
       emit(ShopError(e.toString()));
     }
   }
 
   void search(String query) {
-    final results = _allShops.where((shop) {
-      return shop.name.toLowerCase().contains(query.toLowerCase()) ||
-          shop.description.toLowerCase().contains(query.toLowerCase());
-    }).toList();
-
-    _filteredShops = results;
-
-    emit(ShopLoaded(_filteredShops));
+    _searchQuery = query;
+    _applyFilters();
   }
 
   void filterOpen(bool value) {
-    openOnly = value;
+    _openOnly = value;
+    _applyFilters();
+  }
 
-    if (openOnly) {
-      _filteredShops =
-          _allShops.where((shop) => shop.isOpen).toList();
-    } else {
-      _filteredShops = List.from(_allShops);
-    }
+  void _applyFilters() {
+    final filtered = _allShops.where((shop) {
+      final matchesSearch = shop.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          shop.description.toLowerCase().contains(_searchQuery.toLowerCase());
 
-    emit(ShopLoaded(_filteredShops));
+      final matchesOpen = _openOnly ? shop.isOpen : true;
+
+      return matchesSearch && matchesOpen;
+    }).toList();
+
+    emit(ShopLoaded(filtered));
   }
 
   void sortByETA() {
-    _filteredShops.sort((a, b) => a.eta.compareTo(b.eta));
-    emit(ShopLoaded(List.from(_filteredShops)));
+    if (state is ShopLoaded) {
+      final currentList = List<Shop>.from((state as ShopLoaded).shops);
+
+      currentList.sort((a, b) {
+        // Helper to extract "30" from "30 minutes"
+        int getMinutes(String eta) => int.tryParse(eta.split(' ')[0]) ?? 0;
+        return getMinutes(a.eta).compareTo(getMinutes(b.eta));
+      });
+
+      emit(ShopLoaded(currentList));
+    }
   }
 
   void sortByMinimumOrder() {
-    _filteredShops
-        .sort((a, b) => a.minimumOrder.compareTo(b.minimumOrder));
+    if (state is ShopLoaded) {
+      final currentShops = List<Shop>.from((state as ShopLoaded).shops);
 
-    emit(ShopLoaded(List.from(_filteredShops)));
+      currentShops.sort((a, b) => a.minimumOrder.compareTo(b.minimumOrder));
+
+      emit(ShopLoaded(currentShops));
+    }
   }
 
   void clearFilters() {
-    _filteredShops = List.from(_allShops);
-    openOnly = false;
-
-    emit(ShopLoaded(_filteredShops));
+    _searchQuery = "";
+    _openOnly = false;
+    _applyFilters();
   }
 }

@@ -15,13 +15,22 @@ class ShopModel extends Shop {
 
   factory ShopModel.fromJson(Map<String, dynamic> json) {
     return ShopModel(
-      id: json['id'].toString(),
-      name: json['name'] ?? '',
-      description: json['description'] ?? '',
-      coverPhoto: json['cover_photo'] ?? '',
-      eta: json['eta'] ?? 0,
-      minimumOrder: (json['minimum_order'] ?? 0).toDouble(),
-      location: json['location'] ?? '',
+      id: json['_id']?.toString() ?? '',
+
+      name: json['shopName'] != null ? json['shopName']['en'] ?? '' : '',
+
+      description: json['description'] != null ? json['description']['en'] ?? '' : '',
+
+      coverPhoto: json['coverPhoto'] ?? '',
+
+      eta: json['estimatedDeliveryTime'] ?? '',
+
+      minimumOrder: json['minimumOrder'] != null
+          ? (json['minimumOrder']['amount'] ?? 0).toDouble()
+          : 0.0,
+
+      location: json['address'] != null ? json['address']['city'] ?? '' : '',
+
       isOpen: json['is_open'] ?? false,
     );
   }

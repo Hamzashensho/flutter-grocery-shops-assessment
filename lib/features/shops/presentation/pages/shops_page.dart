@@ -15,13 +15,20 @@ class ShopsPage extends StatefulWidget {
 }
 
 class _ShopsPageState extends State<ShopsPage> {
-
   final debouncer = Debouncer(milliseconds: 400);
-  bool openOnly = false;
+
+  final TextEditingController _searchController = TextEditingController();
+
+  bool _openOnly = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-
     final cubit = context.read<ShopCubit>();
 
     return Scaffold(
@@ -29,43 +36,46 @@ class _ShopsPageState extends State<ShopsPage> {
         title: const Text("Grocery Shops"),
         centerTitle: true,
       ),
-
       body: Padding(
         padding: EdgeInsets.all(16.w),
-
         child: Column(
           children: [
-
-            /// SEARCH FIELD
             TextField(
+              controller: _searchController,
               decoration: InputDecoration(
                 hintText: "Search shops...",
                 prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    cubit.search("");
+                    setState(() {});
+                  },
+                )
+                    : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14.r),
                 ),
               ),
               onChanged: (value) {
-                debouncer.run(() {
-                  cubit.search(value);
-                });
+                setState(() {});
+                debouncer.run(() => cubit.search(value));
               },
             ),
 
             SizedBox(height: 12.h),
 
-            /// FILTER + SORT ROW
             Row(
               children: [
-
-                /// OPEN FILTER
                 Expanded(
                   child: Row(
                     children: [
                       Switch(
-                        value: openOnly,
+                        value: _openOnly,
                         onChanged: (value) {
-                          setState(() => openOnly = value);
+                          setState(() => _openOnly = value);
                           cubit.filterOpen(value);
                         },
                       ),
@@ -74,23 +84,18 @@ class _ShopsPageState extends State<ShopsPage> {
                   ),
                 ),
 
-                /// SORT DROPDOWN
                 DropdownButton<String>(
+                  underline: const SizedBox(), // Cleaner look
                   hint: const Text("Sort"),
+                  icon: const Icon(Icons.sort),
                   items: const [
-                    DropdownMenuItem(
-                      value: "eta",
-                      child: Text("ETA"),
-                    ),
-                    DropdownMenuItem(
-                      value: "order",
-                      child: Text("Minimum Order"),
-                    ),
+                    DropdownMenuItem(value: "eta", child: Text("ETA")),
+                    DropdownMenuItem(value: "order", child: Text("Min Order")),
                   ],
                   onChanged: (value) {
                     if (value == "eta") {
                       cubit.sortByETA();
-                    } else {
+                    } else if (value == "order") {
                       cubit.sortByMinimumOrder();
                     }
                   },
@@ -98,9 +103,12 @@ class _ShopsPageState extends State<ShopsPage> {
 
                 SizedBox(width: 8.w),
 
-                /// CLEAR BUTTON
-                ElevatedButton(
+                TextButton(
                   onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _openOnly = false;
+                    });
                     cubit.clearFilters();
                   },
                   child: const Text("Clear"),
@@ -110,43 +118,31 @@ class _ShopsPageState extends State<ShopsPage> {
 
             SizedBox(height: 12.h),
 
-            /// SHOPS LIST
             Expanded(
               child: BlocBuilder<ShopCubit, ShopState>(
                 builder: (context, state) {
-
                   if (state is ShopLoading) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
+                    return const Center(child: CircularProgressIndicator());
                   }
-
                   if (state is ShopError) {
-                    return Center(
-                      child: Text(state.message),
-                    );
+                    return Center(child: Text(state.message));
                   }
-
                   if (state is ShopLoaded) {
-
                     if (state.shops.isEmpty) {
-                      return const Center(
-                        child: Text("No Results Found"),
-                      );
+                      return const Center(child: Text("No Results Found"));
                     }
-
                     return ListView.separated(
+                      physics: const BouncingScrollPhysics(),
                       itemCount: state.shops.length,
-                      separatorBuilder: (_, __) =>
-                          SizedBox(height: 12.h),
+                      separatorBuilder: (_, __) => SizedBox(height: 12.h),
                       itemBuilder: (context, index) {
                         return ShopCard(
+                          key: ValueKey(state.shops[index].id), // Key for performance
                           shop: state.shops[index],
                         );
                       },
                     );
                   }
-
                   return const SizedBox();
                 },
               ),

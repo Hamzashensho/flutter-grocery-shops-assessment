@@ -9,8 +9,8 @@ class DioHelper {
       BaseOptions(
         baseUrl: 'https://api.orianosy.com/',
         receiveDataWhenStatusError: true,
-        connectTimeout:  10,
-        receiveTimeout: 10,
+        connectTimeout:  10000,
+        receiveTimeout: 10000,
         headers: {
           'secretKey': const String.fromEnvironment('SECRET_KEY'),
           'Content-Type': 'application/json',
